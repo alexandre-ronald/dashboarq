@@ -61,6 +61,7 @@ dSiderBar <- dashboardSidebar(
      menuItem("Algoritmos de Classificação", tabName = "cla", icon = icon("line-chart"),
               menuSubItem("Regressão Logística", icon = icon("check-circle"), tabName = "RegLog"),
               menuSubItem("SVM", icon = icon("check-circle"), tabName = "SVM"),
+              menuSubItem("K-Means Clustering", icon = icon("check-circle"), tabName = "KMC"),
               menuSubItem("KNN", icon = icon("check-circle"), tabName = "KNN"),
               menuSubItem("Árvore de Decisão", icon = icon("check-circle"), tabName = "Arvore"),
               menuSubItem("Naive Bayes", icon = icon("check-circle"), tabName = "NaiveB")),
@@ -147,6 +148,27 @@ body <- dashboardBody(
                     
                
                ,tableOutput("frow3")
+      )
+      ,tabItem(tabName = "KMC"
+               ,box(title = "Fonte de dados", width = 6
+                    ,status = "primary" 
+                    ,solidHeader = TRUE 
+                    ,collapsible = TRUE 
+                    
+                    ,fileInput('file1KMC', 'Selecione um arquivo de dados', accept=c('.csv'))
+                    
+                    ,radioButtons("sepArqKMC", "Separador dos campos", inline = TRUE, c(Virgula = ",", ponto_e_virgula = ";"))
+                    
+                    
+                    ,actionButton("ProcessarKMC",'Processar ')
+                    
+                    ,br()
+                    ,br()
+                    
+               )
+               
+               
+               ,tableOutput("fKMC")
       )
   )
 )
@@ -518,6 +540,126 @@ server <- function( input, output) {
     })
   })
   
+  observeEvent(input$ProcessarKMC, {
+    
+    #https://shiny.rstudio.com/gallery/kmeans-example.html
+    df <- AbrirArquivo(input$file1SVM$datapath, input$sepArqSVM)
+    
+    df2 = df[sample(nrow(df), 20), ]
+    
+    output$mydfSVM<- DT::renderDataTable({
+      DT::datatable(df2[, input$show_varsSVM, drop = FALSE])
+    })
+    
+    mydf = renderTable(df2[, input$show_varsSVM, drop = FALSE])
+    
+    headerPanel('Iris k-means clustering'),
+    sidebarPanel(
+      selectInput('xcol', 'X Variable', names(iris)),
+      selectInput('ycol', 'Y Variable', names(iris),
+                  selected=names(iris)[[2]]),
+      numericInput('clusters', 'Cluster count', 3,
+                   min = 1, max = 9)
+    ),
+    mainPanel(
+      plotOutput('plot1')
+    )
+    
+    #correlação
+    
+    output$plot_correlacaoSVM <- renderText({ p <- knitr::kable(cor(df[, input$show_varsSVM, drop = FALSE])) })
+    
+    output$plot_AnaliseSVM <- renderPlot({ ggpairs(df[, input$show_varsSVM], columns = 1:ncol(df[, input$show_varsSVM]),cardinality_threshold = 50) 
+      
+      
+    })
+    output$summario_datasetSVM = renderDataTable(summary(df[, input$show_varsSVM, drop = FALSE],digits = 6))
+    
+    
+    output$fkmc <- renderUI({ fluidRow(
+      
+      box(title = "Dados", width = 12
+          ,status = "primary" 
+          ,solidHeader = TRUE 
+          ,collapsible = TRUE 
+          
+          
+          ,mainPanel(
+            tabsetPanel(type = "tabs", 
+                        tabPanel("Dados",
+                                 column(3,
+                                        h5("Colunas:"),
+                                        checkboxGroupInput("show_varsSVM", "", names(df), selected = names(df))),
+                                 column(9,
+                                        h5("Dados"), 
+                                        DT::dataTableOutput("mydfSVM"))
+                        ),
+                        
+                        tabPanel("Sumário Estatístico",
+                                 dataTableOutput("summario_datasetSVM")
+                        ),
+                        tabPanel("Correlação dos Dados",
+                                 verbatimTextOutput("plot_correlacaoSVM")
+                        ),
+                        tabPanel ("Matrix de Gráficos",
+                                  plotOutput("plot_AnaliseSVM")
+                        )
+            )                         
+          )),
+      
+      box(title = "SVM - Support Vector Machine.", width = 12
+          ,status = "primary" 
+          ,solidHeader = TRUE 
+          ,collapsible = TRUE 
+          , box(title = "Análise", width = 6
+                ,status = "info" 
+                ,solidHeader = FALSE 
+                ,collapsible = TRUE 
+                # dependent variable
+                ,selectInput('var_alvo', h5('Alvo'), choices = names(df))
+                
+                #Analisra Dataset
+                
+                ,actionButton("Analisar_DatasetSVM",'Analisar Dataset')
+          )
+          , box(title = "Definição", width = 6
+                ,status = "info" 
+                ,solidHeader = FALSE 
+                ,collapsible = TRUE 
+                ,HTML("</br>SVM</br> </br>")
+                
+          )
+          
+          ,mainPanel(
+            tabsetPanel(type = "tabs", 
+                        tabPanel("Histograma",                   
+                                 plotOutput("Hist_alvo")
+                        ),
+                        tabPanel("BarPlot",                   
+                                 plotOutput("distPlot_alvo")
+                                 
+                        ),
+                        
+                        tabPanel("Modelo",                   
+                                 verbatimTextOutput("modelSVM")),
+                        
+                        tabPanel("Residuals",                   
+                                 plotOutput("residuals_hist"),
+                                 plotOutput("residuals_scatter"),
+                                 plotOutput("residuals_qqline")
+                        )
+                        
+            )                         
+          )
+          
+          
+      )
+    )
+      
+    })
+  })
+  
+  
   observeEvent(input$Analisar_Dataset, {
     
     df <- read.csv(input$file1$datapath, header = T, sep = input$sepArqRegLin)
@@ -648,6 +790,78 @@ server <- function( input, output) {
     })
     
 
+    # residuals
+    output$residuals_hist <- renderPlot({
+      hist(modelSVM()$residuals, main = paste(input$var_alvo, '~', '.'), xlab = 'Residuals') 
+    })
+    
+    output$residuals_scatter <- renderPlot({
+      plot(modelSVM()$residuals ~ df()[,input$var_alvo], xlab = input$var_alvo, ylab = 'Residuals')
+      abline(h = 0, lty = 3) 
+    })
+    
+    output$residuals_qqline <- renderPlot({
+      qqnorm(modelSVM()$residuals)
+      qqline(modelSVM()$residuals) 
+    })
+    
+    
+    
+  })
+  observeEvent(input$Analisar_DatasetKMC, {
+    
+    df <- read.csv(input$file1SVM$datapath, header = T, sep = input$sepArqRegLin)
+    
+    df2 <-df[,input$show_varsSVM]
+    
+    
+    selectedData <- reactive({
+      iris[, c(input$xcol, input$ycol)]
+    })
+    
+    clusters <- reactive({
+      kmeans(selectedData(), input$clusters)
+    })
+    
+    output$plot1 <- renderPlot({
+      palette(c("#E41A1C", "#377EB8", "#4DAF4A", "#984EA3",
+                "#FF7F00", "#FFFF33", "#A65628", "#F781BF", "#999999"))
+      
+      par(mar = c(5.1, 4.1, 0, 1))
+      plot(selectedData(),
+           col = clusters()$cluster,
+           pch = 20, cex = 3)
+      points(clusters()$centers, pch = 4, cex = 4, lwd = 4)
+    })
+    
+    # bivariate model
+    modelSVM <- reactive({ svm(input$var_alvo ~ ., data = df2) })
+    
+    output$modelSVM <- renderPrint({
+      summary(modelSVM())
+    })
+    
+    #barplot
+    # Create data
+    output$distPlot_alvo <- renderPlot({
+      ggplot(df, aes(x=as.factor(df[,input$var_alvo]), sepArqRegLin=as.factor(df[,input$var_alvo]) )) + geom_bar() 
+      
+    })
+    
+    
+    # histograms   
+    
+    output$Hist_alvo <- renderPlot({qplot(x <-df[,input$var_alvo], geom="histogram") })
+    
+    # correlation matrix
+    output$corr <- renderGvis({
+      d <- df[,sapply(df,is.integer)|sapply(df,is.numeric)] 
+      cor <- as.data.frame(round(cor(d), 2))
+      cor <- cbind(Variables = rownames(cor), cor)
+      gvisTable(cor) 
+    })
+    
+    
     # residuals
     output$residuals_hist <- renderPlot({
       hist(modelSVM()$residuals, main = paste(input$var_alvo, '~', '.'), xlab = 'Residuals') 
