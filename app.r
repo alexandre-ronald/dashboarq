@@ -187,115 +187,8 @@ ui <- dashboardPage(
 ## crie as funções do servidor para o dashboard 
 server <- function( input, output) { 
   
-  observeEvent(input$ProcessarRegLog, {
-    
-    #dfRegLog <- read.csv(input$fileRegLog$datapath, header = T, sep = input$sepArqRegLin)
-    
-    dfRegLog <- AbrirArquivo(input$fileRegLog$datapath, input$sepArqRegLin)
-    
-    df2 = dfRegLog[sample(nrow(dfRegLog), 20), ]
-    
-    output$mydfRegLog<- DT::renderDataTable({
-      DT::datatable(df2[, input$show_vars, drop = FALSE])
-    })
-    
-    myddfRegLog = renderTable(df2[, input$show_vars, drop = FALSE])
-    
-    #correlação
-    
-    output$plot_correlacao <- renderText({ p <- knitr::kable(cor(dfRegLog[, input$show_vars, drop = FALSE])) })
-    
-    output$plot_Analise <- renderPlot({ ggpairs(dfRegLog[, input$show_vars], columns = 1:ncol(dfRegLog[, input$show_vars])) 
-    })
-    output$summario_dataset = renderDataTable(summary(dfRegLog[, input$show_vars, drop = FALSE],digits = 6))
-    
-    
-    output$frow1 <- renderUI({ fluidRow(
-      
-      box(title = "Dados", width = 12
-          ,status = "primary" 
-          ,solidHeader = TRUE 
-          ,collapsible = TRUE 
-          
-          
-          ,mainPanel(
-            tabsetPanel(type = "tabs", 
-                        tabPanel("Dados",
-                                 column(3,
-                                        h5("Colunas:"),
-                                        checkboxGroupInput("show_vars", "", names(df), selected = names(dfRegLog))),
-                                 column(9,
-                                        h5("Dados"), 
-                                        DT::dataTableOutput("mydf"))
-                        ),
-                        
-                        tabPanel("Sumário Estatístico",
-                                 dataTableOutput("summario_dataset")
-                        ),
-                        tabPanel("Correlação dos Dados",
-                                 verbatimTextOutput("plot_correlacao")
-                        ),
-                        tabPanel ("Matriz de Gráficos",
-                                  plotOutput("plot_Analise")
-                        )
-            )                         
-          )),
-      
-      box(title = "Regressão Logarítmica", width = 12
-          ,status = "primary" 
-          ,solidHeader = TRUE 
-          ,collapsible = TRUE 
-          , box(title = "Análise", width = 6
-                ,status = "info" 
-                ,solidHeader = FALSE 
-                ,collapsible = TRUE 
-                # dependent variable
-                ,selectInput('var_dep', h5('Variável Dependente'), choices = names(dfRegLog))
-                
-                # independent variable
-                ,selectInput('var_indep', h5('Variável Independente'), choices = names(dfRegLog))
-                
-                #Analisra Dataset
-                
-                ,actionButton("Analisar_Dataset",'Analisar Dataset')
-          )
-          , box(title = "Definição", width = 6
-                ,status = "info" 
-                ,solidHeader = FALSE 
-                ,collapsible = TRUE 
-                ,HTML("</br>Em estatística ou econometria, regressão linear é uma equação para se estimar a condicional (valor esperado) de uma variável y, dados os valores de algumas outras variáveis x.</br> </br>")
-                
-          )
-          
-          ,mainPanel(
-            tabsetPanel(type = "tabs",
-                        tabPanel("Histograma",                   
-                                 plotOutput("Hist_dv"),
-                                 plotOutput("Hist_iv")
-                        ),
-                        
-                        tabPanel("BarPlot",                   
-                                 plotOutput("distPlot_dv"),
-                                 plotOutput("distPlot_iv")
-                        ),
-                        
-                        tabPanel("Dispersão",                   
-                                 plotOutput("scatter")),
 
-                        tabPanel("Modelo",                   
-                                 verbatimTextOutput("model"))
-
-                        
-            )                         
-          )
-          
-          
-      )
-    )
-      
-    })
-  })
-  
+  #Regressão Linear
   observeEvent(input$Processar, {
     
     #df <- read.csv(input$file1$datapath, header = T, sep = input$sepArqRegLin)
@@ -432,220 +325,6 @@ server <- function( input, output) {
 
           })
   })
-  observeEvent(input$ProcessarSVM, {
-    
-
-    df <- AbrirArquivo(input$file1SVM$datapath, input$sepArqSVM)
-    
-    df2 = df[sample(nrow(df), 20), ]
-    
-    output$mydfSVM<- DT::renderDataTable({
-      DT::datatable(df2[, input$show_varsSVM, drop = FALSE])
-    })
-    
-    mydf = renderTable(df2[, input$show_varsSVM, drop = FALSE])
-    
-    #correlação
-    
-    output$plot_correlacaoSVM <- renderText({ p <- knitr::kable(cor(df[, input$show_varsSVM, drop = FALSE])) })
-    
-    output$plot_AnaliseSVM <- renderPlot({ ggpairs(df[, input$show_varsSVM], columns = 1:ncol(df[, input$show_varsSVM]),cardinality_threshold = 50) 
-      
-     
-    })
-    output$summario_datasetSVM = renderDataTable(summary(df[, input$show_varsSVM, drop = FALSE],digits = 6))
-    
-    
-    output$frow3 <- renderUI({ fluidRow(
-      
-      box(title = "Dados", width = 12
-          ,status = "primary" 
-          ,solidHeader = TRUE 
-          ,collapsible = TRUE 
-          
-          
-          ,mainPanel(
-            tabsetPanel(type = "tabs", 
-                        tabPanel("Dados",
-                                 column(3,
-                                        h5("Colunas:"),
-                                        checkboxGroupInput("show_varsSVM", "", names(df), selected = names(df))),
-                                 column(9,
-                                        h5("Dados"), 
-                                        DT::dataTableOutput("mydfSVM"))
-                        ),
-                        
-                        tabPanel("Sumário Estatístico",
-                                 dataTableOutput("summario_datasetSVM")
-                        ),
-                        tabPanel("Correlação dos Dados",
-                                 verbatimTextOutput("plot_correlacaoSVM")
-                        ),
-                        tabPanel ("Matrix de Gráficos",
-                                  plotOutput("plot_AnaliseSVM")
-                        )
-            )                         
-          )),
-      
-      box(title = "SVM - Support Vector Machine.", width = 12
-          ,status = "primary" 
-          ,solidHeader = TRUE 
-          ,collapsible = TRUE 
-          , box(title = "Análise", width = 6
-                ,status = "info" 
-                ,solidHeader = FALSE 
-                ,collapsible = TRUE 
-                # dependent variable
-                ,selectInput('var_alvo', h5('Alvo'), choices = names(df))
-                ,actionButton("Analisar_DatasetSVM",'Analisar Dataset')
-          )
-          , box(title = "Definição", width = 6
-                ,status = "info" 
-                ,solidHeader = FALSE 
-                ,collapsible = TRUE 
-                ,HTML("</br>SVM</br> </br>")
-                
-          )
-          
-          ,mainPanel(
-            tabsetPanel(type = "tabs", 
-                        tabPanel("Histograma",                   
-                                 plotOutput("Hist_alvo")
-                        ),
-                        tabPanel("BarPlot",                   
-                                 plotOutput("distPlot_alvo")
-                                
-                        ),
-                        
-                        tabPanel("Modelo",                   
-                                 verbatimTextOutput("modelSVM")),
-                        
-                        tabPanel("Residuals",                   
-                                 plotOutput("residuals_hist"),
-                                 plotOutput("residuals_scatter"),
-                                 plotOutput("residuals_qqline")
-                        )
-                        
-            )                         
-          )
-          
-          
-      )
-    )
-      
-    })
-  })
-  observeEvent(input$ProcessarKMC, {
-    
-    #https://shiny.rstudio.com/gallery/kmeans-example.html
-    df <- AbrirArquivo(input$file1KMC$datapath, input$sepArqKMC)
-    
-    df2 = df[sample(nrow(df), 20), ]
-    
-    output$mydfKMC<- DT::renderDataTable({
-      DT::datatable(df2[, input$show_varsKMC, drop = FALSE])
-    })
-    
-    mydf = renderTable(df2[, input$show_varsKMC, drop = FALSE])
- 
-    #correlação
-    
-    output$plot_correlacaoKMC <- renderText({ p <- knitr::kable(cor(df[, input$show_varsKMC, drop = FALSE])) })
-    
-    output$plot_AnaliseKMC <- renderPlot({ ggpairs(df[, input$show_varsKMC], columns = 1:ncol(df[, input$show_varsKMC]),cardinality_threshold = 50) 
-      
-      
-    })
-    output$summario_datasetKMC = renderDataTable(summary(df[, input$show_varsKMC, drop = FALSE],digits = 6))
-    
-    
-    output$fKMC <- renderUI({ fluidRow(
-      
-      box(title = "Dados", width = 12
-          ,status = "primary" 
-          ,solidHeader = TRUE 
-          ,collapsible = TRUE 
-          
-          
-          ,mainPanel(
-            tabsetPanel(type = "tabs", 
-                        tabPanel("Dados",
-                                 column(3,
-                                        h5("Colunas:"),
-                                        checkboxGroupInput("show_varsKMC", "", names(df), selected = names(df))),
-                                 column(9,
-                                        h5("Dados"), 
-                                        DT::dataTableOutput("mydfKMC"))
-                        ),
-                        
-                        tabPanel("Sumário Estatístico",
-                                 dataTableOutput("summario_datasetKMC")
-                        ),
-                        tabPanel("Correlação dos Dados",
-                                 verbatimTextOutput("plot_correlacaoKMC")
-                        ),
-                        tabPanel ("Matrix de Gráficos",
-                                  plotOutput("plot_AnaliseKMC")
-                        )
-            )                         
-          )),
-      
-      box(title = "k-Means Clustering.", width = 12
-          ,status = "primary" 
-          ,solidHeader = TRUE 
-          ,collapsible = TRUE 
-          , box(title = "Análise", width = 6
-                ,status = "info" 
-                ,solidHeader = FALSE 
-                ,collapsible = TRUE 
-                # dependent variable
-                ,selectInput('xcol', h5('X Variable'), choices = names(df))
-                ,selectInput('ycol', h5('Y Variable'), choices = names(df), selected=names(df)[[2]])
-                ,numericInput('clusters', h5('Número de Clusters'), 3, min = 1, max = 9)
-                
-                #Analisra Dataset
-                
-                ,actionButton("Analisar_DatasetKMC",'Analisar Dataset')
-          )
-          , box(title = "Definição", width = 6
-                ,status = "info" 
-                ,solidHeader = FALSE 
-                ,collapsible = TRUE 
-                ,HTML("</br>SVM</br> </br>")
-                
-          )
-          
-          ,mainPanel(
-            tabsetPanel(type = "tabs", 
-                        
-                        tabPanel("Plot",                   
-                                 plotOutput("plotKMC")
-                                 
-                        ),
-                        tabPanel("Histograma",                   
-                                 plotOutput("Xcol"),
-                                 plotOutput("ycol")
-                        ),
-                        tabPanel("Modelo",                   
-                                 verbatimTextOutput("modelSVM")),
-                        
-                        tabPanel("Residuals",                   
-                                 plotOutput("residuals_hist"),
-                                 plotOutput("residuals_scatter"),
-                                 plotOutput("residuals_qqline")
-                        )
-                        
-            )                         
-          )
-          
-          
-      )
-    )
-      
-    })
-  })
-  
-  
   observeEvent(input$Analisar_Dataset, {
     
     df <- read.csv(input$file1$datapath, header = T, sep = input$sepArqRegLin)
@@ -742,57 +421,118 @@ server <- function( input, output) {
     
     
   })
-  observeEvent(input$Analisar_DatasetSVM, {
+  
+
+  #K-Means Clustering
+  
+  observeEvent(input$ProcessarKMC, {
     
-    df <- read.csv(input$file1SVM$datapath, header = T, sep = input$sepArqRegSVM)
+    #https://shiny.rstudio.com/gallery/kmeans-example.html
+    df <- AbrirArquivo(input$file1KMC$datapath, input$sepArqKMC)
     
-    #df2 <-df[,input$show_varsSVM]
+    df2 = df[sample(nrow(df), 20), ]
     
-    # bivariate model
-    modelSVM <- reactive({ svm(input$var_alvo ~ ., data = df) })
-    
-    output$modelSVM <- renderPrint({
-      summary(modelSVM())
+    output$mydfKMC<- DT::renderDataTable({
+      DT::datatable(df2[, input$show_varsKMC, drop = FALSE])
     })
     
-    #barplot
-    # Create data
-    output$distPlot_alvo <- renderPlot({
-      ggplot(df, aes(x=as.factor(df[,input$var_alvo]), sepArqRegLin=as.factor(df[,input$var_alvo]) )) + geom_bar() 
+    mydf = renderTable(df2[, input$show_varsKMC, drop = FALSE])
+    
+    #correlação
+    
+    output$plot_correlacaoKMC <- renderText({ p <- knitr::kable(cor(df[, input$show_varsKMC, drop = FALSE])) })
+    
+    output$plot_AnaliseKMC <- renderPlot({ ggpairs(df[, input$show_varsKMC], columns = 1:ncol(df[, input$show_varsKMC]),cardinality_threshold = 50) 
+      
       
     })
+    output$summario_datasetKMC = renderDataTable(summary(df[, input$show_varsKMC, drop = FALSE],digits = 6))
     
     
-    # histograms   
-    
-    output$Hist_alvo <- renderPlot({qplot(x <-df[,input$var_alvo], geom="histogram") })
-    
-    # correlation matrix
-    output$corr <- renderGvis({
-      d <- df[,sapply(df,is.integer)|sapply(df,is.numeric)] 
-      cor <- as.data.frame(round(cor(d), 2))
-      cor <- cbind(Variables = rownames(cor), cor)
-      gvisTable(cor) 
+    output$fKMC <- renderUI({ fluidRow(
+      
+      box(title = "Dados", width = 12
+          ,status = "primary" 
+          ,solidHeader = TRUE 
+          ,collapsible = TRUE 
+          
+          
+          ,mainPanel(
+            tabsetPanel(type = "tabs", 
+                        tabPanel("Dados",
+                                 column(3,
+                                        h5("Colunas:"),
+                                        checkboxGroupInput("show_varsKMC", "", names(df), selected = names(df))),
+                                 column(9,
+                                        h5("Dados"), 
+                                        DT::dataTableOutput("mydfKMC"))
+                        ),
+                        
+                        tabPanel("Sumário Estatístico",
+                                 dataTableOutput("summario_datasetKMC")
+                        ),
+                        tabPanel("Correlação dos Dados",
+                                 verbatimTextOutput("plot_correlacaoKMC")
+                        ),
+                        tabPanel ("Matrix de Gráficos",
+                                  plotOutput("plot_AnaliseKMC")
+                        )
+            )                         
+          )),
+      
+      box(title = "k-Means Clustering.", width = 12
+          ,status = "primary" 
+          ,solidHeader = TRUE 
+          ,collapsible = TRUE 
+          , box(title = "Análise", width = 6
+                ,status = "info" 
+                ,solidHeader = FALSE 
+                ,collapsible = TRUE 
+                # dependent variable
+                ,selectInput('xcol', h5('X Variable'), choices = names(df))
+                ,selectInput('ycol', h5('Y Variable'), choices = names(df), selected=names(df)[[2]])
+                ,numericInput('clusters', h5('Número de Clusters'), 3, min = 1, max = 9)
+                
+                #Analisra Dataset
+                
+                ,actionButton("Analisar_DatasetKMC",'Analisar Dataset')
+          )
+          , box(title = "Definição", width = 6
+                ,status = "info" 
+                ,solidHeader = FALSE 
+                ,collapsible = TRUE 
+                ,HTML("</br>SVM</br> </br>")
+                
+          )
+          
+          ,mainPanel(
+            tabsetPanel(type = "tabs", 
+                        
+                        tabPanel("Plot",                   
+                                 plotOutput("plotKMC")
+                                 
+                        ),
+                        tabPanel("Histograma",                   
+                                 plotOutput("Xcol"),
+                                 plotOutput("ycol")
+                        ),
+                        tabPanel("Modelo",                   
+                                 verbatimTextOutput("modelSVM")),
+                        
+                        tabPanel("Residuals",                   
+                                 plotOutput("residuals_hist"),
+                                 plotOutput("residuals_scatter"),
+                                 plotOutput("residuals_qqline")
+                        )
+                        
+            )                         
+          )
+          
+          
+      )
+    )
+      
     })
-    
-
-    # residuals
-    output$residuals_hist <- renderPlot({
-      hist(modelSVM()$residuals, main = paste(input$var_alvo, '~', '.'), xlab = 'Residuals') 
-    })
-    
-    output$residuals_scatter <- renderPlot({
-      plot(modelSVM()$residuals ~ df()[,input$var_alvo], xlab = input$var_alvo, ylab = 'Residuals')
-      abline(h = 0, lty = 3) 
-    })
-    
-    output$residuals_qqline <- renderPlot({
-      qqnorm(modelSVM()$residuals)
-      qqline(modelSVM()$residuals) 
-    })
-    
-    
-    
   })
   observeEvent(input$Analisar_DatasetKMC, {
     
@@ -868,6 +608,278 @@ server <- function( input, output) {
     
   })
   
+  #SVM -Support Vector Machine
+  
+  observeEvent(input$ProcessarSVM, {
+    
+
+    df <- AbrirArquivo(input$file1SVM$datapath, input$sepArqSVM)
+    
+    df2 = df[sample(nrow(df), 20), ]
+    
+    #output$DataArq <- df
+    
+    output$mydfSVM<- DT::renderDataTable({
+      DT::datatable(df[, input$show_varsSVM, drop = FALSE])
+    })
+    
+    #mydf = renderTable(df2[, input$show_varsSVM, drop = FALSE])
+    
+    #correlação
+    
+    output$plot_correlacaoSVM <- renderText({ p <- knitr::kable(cor(df[, input$show_varsSVM, drop = FALSE])) })
+    
+    output$plot_AnaliseSVM <- renderPlot({ ggpairs(df[, input$show_varsSVM], columns = 1:ncol(df[, input$show_varsSVM]),cardinality_threshold = 50) 
+      
+     
+    })
+    output$summario_datasetSVM = renderDataTable(summary(df[, input$show_varsSVM, drop = FALSE],digits = 6))
+    
+    
+    output$frow3 <- renderUI({ fluidRow(
+      
+      box(title = "Dados", width = 12
+          ,status = "primary" 
+          ,solidHeader = TRUE 
+          ,collapsible = TRUE 
+          
+          
+          ,mainPanel(
+            tabsetPanel(type = "tabs", 
+                        tabPanel("Dados",
+                                 column(3,
+                                        h5("Colunas:"),
+                                        checkboxGroupInput("show_varsSVM", "", names(df), selected = names(df))),
+                                 column(9,
+                                        h5("Dados"), 
+                                        DT::dataTableOutput("mydfSVM"))
+                        ),
+                        
+                        tabPanel("Sumário Estatístico",
+                                 dataTableOutput("summario_datasetSVM")
+                        ),
+                        tabPanel("Correlação dos Dados",
+                                 verbatimTextOutput("plot_correlacaoSVM")
+                        ),
+                        tabPanel ("Matrix de Gráficos",
+                                  plotOutput("plot_AnaliseSVM")
+                        )
+            )                         
+          )),
+      
+      box(title = "SVM - Support Vector Machine.", width = 12
+          ,status = "primary" 
+          ,solidHeader = TRUE 
+          ,collapsible = TRUE 
+          , box(title = "Análise", width = 6
+                ,status = "info" 
+                ,solidHeader = FALSE 
+                ,collapsible = TRUE 
+                # dependent variable
+                ,selectInput('var_alvo', h5('Alvo'), choices = names(df))
+                ,actionButton("Analisar_DatasetSVM",'Analisar Dataset')
+          )
+          , box(title = "Definição", width = 6
+                ,status = "info" 
+                ,solidHeader = FALSE 
+                ,collapsible = TRUE 
+                ,HTML("</br>SVM</br> </br>")
+                
+          )
+          
+          ,mainPanel(
+            tabsetPanel(type = "tabs", 
+                        tabPanel("Histograma",                   
+                                 plotOutput("Hist_alvo")
+                        ),
+                        tabPanel("BarPlot",                   
+                                 plotOutput("distPlot_alvo")
+                                
+                        ),
+                        
+                        tabPanel("Modelo",                   
+                                 verbatimTextOutput("modelSVM")),
+                        
+                        tabPanel("Residuals",                   
+                                 plotOutput("residuals_hist"),
+                                 plotOutput("residuals_scatter"),
+                                 plotOutput("residuals_qqline")
+                        )
+                        
+            )                         
+          )
+          
+          
+      )
+    )
+      
+    })
+  })  
+  observeEvent(input$Analisar_DatasetSVM, {
+    
+   df <- read.csv(input$file1SVM$datapath, header = T, sep = input$sepArqRegSVM)
+   # df=input$DataArq
+    
+    #df2 <-df[,input$show_varsSVM]
+    
+    # bivariate model
+    modelSVM <- reactive({ svm(input$var_alvo ~ ., data = df) })
+   
+   print(input$var_alvo)
+   
+    output$modelSVM <- renderPrint({
+     summary(modelSVM())
+     })
+    
+    #barplot
+    # Create data
+    output$distPlot_alvo <- renderPlot({
+      ggplot(df, aes(x=as.factor(df[,input$var_alvo]), sepArqRegLin=as.factor(df[,input$var_alvo]) )) + geom_bar() 
+      
+    })
+    
+    
+    # histograms   
+    
+    output$Hist_alvo <- renderPlot({qplot(x <-df[,input$var_alvo], geom="histogram") })
+    
+    # correlation matrix
+    output$corr <- renderGvis({
+      d <- df[,sapply(df,is.integer)|sapply(df,is.numeric)] 
+      cor <- as.data.frame(round(cor(d), 2))
+      cor <- cbind(Variables = rownames(cor), cor)
+      gvisTable(cor) 
+    })
+    
+
+    # residuals
+    output$residuals_hist <- renderPlot({
+      hist(modelSVM()$residuals, main = paste(input$var_alvo, '~', '.'), xlab = 'Residuals') 
+    })
+    
+    output$residuals_scatter <- renderPlot({
+      plot(modelSVM()$residuals ~ df()[,input$var_alvo], xlab = input$var_alvo, ylab = 'Residuals')
+      abline(h = 0, lty = 3) 
+    })
+    
+    output$residuals_qqline <- renderPlot({
+      qqnorm(modelSVM()$residuals)
+      qqline(modelSVM()$residuals) 
+    })
+    
+    
+    
+  })
+  
+  
+  observeEvent(input$ProcessarRegLog, {
+    
+    #dfRegLog <- read.csv(input$fileRegLog$datapath, header = T, sep = input$sepArqRegLin)
+    
+    dfRegLog <- AbrirArquivo(input$fileRegLog$datapath, input$sepArqRegLin)
+    
+    df2 = dfRegLog[sample(nrow(dfRegLog), 20), ]
+    
+    output$mydfRegLog<- DT::renderDataTable({
+      DT::datatable(df2[, input$show_vars, drop = FALSE])
+    })
+    
+    myddfRegLog = renderTable(df2[, input$show_vars, drop = FALSE])
+    
+    #correlação
+    
+    output$plot_correlacao <- renderText({ p <- knitr::kable(cor(dfRegLog[, input$show_vars, drop = FALSE])) })
+    
+    output$plot_Analise <- renderPlot({ ggpairs(dfRegLog[, input$show_vars], columns = 1:ncol(dfRegLog[, input$show_vars])) 
+    })
+    output$summario_dataset = renderDataTable(summary(dfRegLog[, input$show_vars, drop = FALSE],digits = 6))
+    
+    
+    output$frow1 <- renderUI({ fluidRow(
+      
+      box(title = "Dados", width = 12
+          ,status = "primary" 
+          ,solidHeader = TRUE 
+          ,collapsible = TRUE 
+          
+          
+          ,mainPanel(
+            tabsetPanel(type = "tabs", 
+                        tabPanel("Dados",
+                                 column(3,
+                                        h5("Colunas:"),
+                                        checkboxGroupInput("show_vars", "", names(df), selected = names(dfRegLog))),
+                                 column(9,
+                                        h5("Dados"), 
+                                        DT::dataTableOutput("mydf"))
+                        ),
+                        
+                        tabPanel("Sumário Estatístico",
+                                 dataTableOutput("summario_dataset")
+                        ),
+                        tabPanel("Correlação dos Dados",
+                                 verbatimTextOutput("plot_correlacao")
+                        ),
+                        tabPanel ("Matriz de Gráficos",
+                                  plotOutput("plot_Analise")
+                        )
+            )                         
+          )),
+      
+      box(title = "Regressão Logarítmica", width = 12
+          ,status = "primary" 
+          ,solidHeader = TRUE 
+          ,collapsible = TRUE 
+          , box(title = "Análise", width = 6
+                ,status = "info" 
+                ,solidHeader = FALSE 
+                ,collapsible = TRUE 
+                # dependent variable
+                ,selectInput('var_dep', h5('Variável Dependente'), choices = names(dfRegLog))
+                
+                # independent variable
+                ,selectInput('var_indep', h5('Variável Independente'), choices = names(dfRegLog))
+                
+                #Analisra Dataset
+                
+                ,actionButton("Analisar_Dataset",'Analisar Dataset')
+          )
+          , box(title = "Definição", width = 6
+                ,status = "info" 
+                ,solidHeader = FALSE 
+                ,collapsible = TRUE 
+                ,HTML("</br>Em estatística ou econometria, regressão linear é uma equação para se estimar a condicional (valor esperado) de uma variável y, dados os valores de algumas outras variáveis x.</br> </br>")
+                
+          )
+          
+          ,mainPanel(
+            tabsetPanel(type = "tabs",
+                        tabPanel("Histograma",                   
+                                 plotOutput("Hist_dv"),
+                                 plotOutput("Hist_iv")
+                        ),
+                        
+                        tabPanel("BarPlot",                   
+                                 plotOutput("distPlot_dv"),
+                                 plotOutput("distPlot_iv")
+                        ),
+                        
+                        tabPanel("Dispersão",                   
+                                 plotOutput("scatter")),
+
+                        tabPanel("Modelo",                   
+                                 verbatimTextOutput("model"))
+
+                        
+            )                         
+          )
+          
+          
+      )
+    )
+      
+    })
+  })
 }
 
 shinyApp(ui, server)
