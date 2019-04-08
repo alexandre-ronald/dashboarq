@@ -15,6 +15,33 @@ library(e1071)
 
 # Cabeçalho do painel carregando o título do dashboard
 
+classificationNaiveBayes <- function(data, class = names(data)[length(names(data))]) {
+  
+  formula <- paste(class, " ~ .", sep = "")
+  model <- naiveBayes(as.formula(formula), data = data)
+  
+  return(model)
+  
+}
+
+colunaFormulas <-function(df,colunaExclusao){
+  
+  registros = dim(df)[2]
+
+  colunas = ""
+  
+  for(i in 1:registros){
+    if (colnames(df[i]) != colunaExclusao) {
+      if (i==1){
+        colunas <- colnames(df[i])
+      }else{
+        colunas <- paste(colunas,'+', colnames(df[i]))
+      }
+    }
+  }
+  
+  return(colunas)
+}
 
 AbrirArquivo <- function(path, separador) {
   
@@ -51,7 +78,7 @@ dSiderBar <- dashboardSidebar(
   sidebarMenu( 
     id = "tabs",
     menuItem("Página Inicial", tabName = "fb", icon = icon("home")),
-    menuItem("Análise Exploratória", tabName = "ae", icon = icon("line-chart")),
+    menuItem("Análise Exploratória", tabName = "analiseexploratoria", icon = icon("line-chart")),
 
      menuItem("Algorítmos de Regressão", tabName = "al", icon = icon("line-chart"),
               menuSubItem("Regressão Linear", icon = icon("check-circle"),tabName = "RegLinear")
@@ -89,8 +116,30 @@ body <- dashboardBody(
   
   
   tabItems(
+    
+    
+    tabItem(tabName = "analiseexploratoria"
+            ,box(title = "Fonte de dados", width = 6
+                 ,status = "primary" 
+                 ,solidHeader = TRUE 
+                 ,collapsible = TRUE 
+                 
+                 ,fileInput('AnaliseArq', 'Selecione um arquivo de dados', accept=c('.csv'))
+                 
+                 ,radioButtons("sepAnalise", "Separador dos campos", inline = TRUE, c(Virgula = ",", ponto_e_virgula = ";"))
+                 
+                 
+                 ,actionButton("ProcessarAnalise",'Analisar Dados')
+                 
+                 ,br()
+                 ,br()
+                 
+            )
+            ,tableOutput("frAnalise")
+            
+    )
    
-      tabItem(tabName = "RegLinear"
+     ,tabItem(tabName = "RegLinear"
               ,box(title = "Fonte de dados", width = 6
                   ,status = "primary" 
                   ,solidHeader = TRUE 
@@ -206,7 +255,114 @@ ui <- dashboardPage(
 ## crie as funções do servidor para o dashboard 
 server <- function( input, output) { 
   
+  #Análise exploratoria
+  
+  observeEvent(input$ProcessarAnalise, {
+    
+    #df <- read.csv(input$file1$datapath, header = T, sep = input$sepArqRegLin)
+    df <- AbrirArquivo(input$AnaliseArq$datapath, input$sepAnalise)
+    
+    df2 = df[sample(nrow(df), 20), ]
+    
+    output$mydf<- DT::renderDataTable({
+      DT::datatable(df2[, input$show_vars, drop = FALSE])
+    })
+    
+    mydf = renderTable(df2[, input$show_vars, drop = FALSE])
+    
+    #correlação
+    
+    output$plot_correlacao <- renderText({ p <- knitr::kable(cor(df[, input$show_vars, drop = FALSE])) })
+    
+    #facet_wrap
+    # output$plot_Analise <- renderPlot({ p <- pairs(df[, input$show_vars, drop = FALSE]) 
+    #output$plot_Analise <- renderPlot({ ggpairs(df[, input$show_vars], columns = 1:ncol(df[, input$show_vars]), ggplot2::aes(colour=Species)) 
+    output$plot_Analise <- renderPlot({ ggpairs(df[, input$show_vars], columns = 1:ncol(df[, input$show_vars]),cardinality_threshold = 50) 
+      
+      #  output$plot_Analise <- renderPlot({ p <- ggpairs(df[, input$show_vars, drop = FALSE], 
+      #                                                   columns = 1:ncol(df[, input$show_vars]), 
+      #                                                   ggplot2::aes(colour=Species))
+      
+      #GGally::ggpairs(df) 
+      
+      
+      #ggpairs(df, mapping = NULL, columns = 1:ncol(df), title = "Analise de Dados",
+      #        upper = list(continuous = "cor", combo = "box_no_facet", discrete ="facetbar", na = "na"), 
+      #        lower = list(continuous = "points", combo = "facethist", discrete = "facetbar", na = "na"), 
+      #        diag = list(continuous ="densityDiag", discrete = "barDiag", na = "naDiag"),
+      #        xlab = NULL, ylab = NULL, axisLabels = c("show", "internal", "none"),
+      #        columnLabels = names(df), labeller = "label_value",
+      #        switch = NULL, showStrips = NULL, legend = NULL,
+      #        cardinality_threshold = NULL, progress = NULL
+      #        )
+    })
+    output$summario_dataset = renderDataTable(summary(df[, input$show_vars, drop = FALSE],digits = 6))
+    
+    
+    output$frAnalise <- renderUI({ fluidRow(
+      
+      box(title = "Dados", width = 12
+          ,status = "primary" 
+          ,solidHeader = TRUE 
+          ,collapsible = TRUE 
+          
+          
+          ,mainPanel(
+            tabsetPanel(type = "tabs", 
+                        tabPanel("Dados",
+                                 column(3,
+                                        h5("Colunas:"),
+                                        checkboxGroupInput("show_vars", "", names(df), selected = names(df))),
+                                 column(9,
+                                        h5("Dados"), 
+                                        DT::dataTableOutput("mydf"))
+                        ),
+                        
+                        tabPanel("Sumário Estatístico",
+                                 dataTableOutput("summario_dataset")
+                        ),
+                        tabPanel("Correlação dos Dados",
+                                 verbatimTextOutput("plot_correlacao")
+                        ),
+                        tabPanel ("Matrix de Gráficos",
+                                  plotOutput("plot_Analise")
+                        ),
 
+                        tabPanel("Histograma",                   
+                                 plotOutput("Hist_dv"),
+                                 plotOutput("Hist_iv")
+                        ),
+                        tabPanel("BarPlot",                   
+                                 plotOutput("distPlot_dv"),
+                                 #sliderInput("bins_dv", "Numero de barras:", min = 1, max = 50, value = 7),  
+                                 plotOutput("distPlot_iv")
+                                 #sliderInput("bins_iv", "Numero de barras:", min = 1, max = 50, value = 7)
+                        ),
+                        
+                        tabPanel("Dispersão",                   
+                                 plotOutput("scatter")),
+                        
+                        tabPanel("Correlations",                   
+                                 htmlOutput("corr")),
+                        
+                        tabPanel("Modelo",                   
+                                 verbatimTextOutput("model")),
+                        
+                        tabPanel("Residuals",                   
+                                 plotOutput("residuals_hist"),
+                                 plotOutput("residuals_scatter"),
+                                 plotOutput("residuals_qqline")
+                        )
+                        
+            )                         
+          )
+          
+          
+      )
+    )
+      
+    })
+  })
   
   #Regressão Linear
   observeEvent(input$Processar, {
@@ -636,7 +792,7 @@ server <- function( input, output) {
   if (!is.null(input$file1NB$datapath)) 
   {
     
-    print(input$file1NB$datapath)
+
     #https://shiny.rstudio.com/gallery/kmeans-example.html
     df <- AbrirArquivo(input$file1NB$datapath, input$sepArqNB)
     
@@ -699,10 +855,8 @@ server <- function( input, output) {
                 ,solidHeader = FALSE 
                 ,collapsible = TRUE 
                 # dependent variable
-                ,selectInput('xcol', h5('X Variable'), choices = names(df))
-                ,selectInput('ycol', h5('Y Variable'), choices = names(df), selected=names(df)[[2]])
-                ,numericInput('clusters', h5('Número de Clusters'), 3, min = 1, max = 9)
-                
+                ,selectInput('naiveAlvo', h5('Alvo'), choices = names(df))
+
                 #Analisra Dataset
                 
                 ,actionButton("Analisar_DatasetNB",'Analisar Dataset')
@@ -723,11 +877,10 @@ server <- function( input, output) {
                                  
                         ),
                         tabPanel("Histograma",                   
-                                 plotOutput("Xcol"),
-                                 plotOutput("ycol")
+                                 plotOutput("histNaiveAlvo")
                         ),
                         tabPanel("Modelo",                   
-                                 verbatimTextOutput("modelSVM")),
+                                 verbatimTextOutput("modelNB")),
                         
                         tabPanel("Residuals",                   
                                  plotOutput("residuals_hist"),
@@ -749,33 +902,27 @@ server <- function( input, output) {
     df <- read.csv(input$file1NB$datapath, header = T, sep = input$sepArqNB)
     
     df2 <-df[,input$show_varsNB]
+  
+    registros = dim(df)[1]
     
+    amostra = sample(2,registros,replace = T,prob = c(0.70,0.30))
     
-    selectedData <- reactive({
-      df[, c(input$xcol, input$ycol)]
-    })
+    naiveTreino = df[amostra==1,]
+    naiveTeste = df[amostra==2,]
     
-    clusters <- reactive({
-      kmeans(selectedData(), input$clusters)
-    })
+    colunas <- colunaFormulas(df,input$naiveAlvo)
     
-    output$plotNB <- renderPlot({
-      palette(c("#E41A1C", "#377EB8", "#4DAF4A", "#984EA3",
-                "#FF7F00", "#FFFF33", "#A65628", "#F781BF", "#999999"))
-      
-      par(mar = c(5.1, 4.1, 0, 1))
-      plot(selectedData(),
-           col = clusters()$cluster,
-           pch = 20, cex = 3)
-      points(clusters()$centers, pch = 4, cex = 4, lwd = 4)
-    })
+    print(colunas)
     
+    naiveModelo <- classificationNaiveBayes(naiveTreino, input$naiveAlvo)
+
+
     # bivariate model
     # modelNB<- reactive({ svm(input$var_alvo ~ ., data = df2) })
     
-    # output$modelSVM <- renderPrint({
-    #   summary(modelSVM())
-    # })
+     output$modelNB <- renderPrint({
+       naiveModelo
+     })
     
     #barplot
     # Create data
@@ -786,8 +933,8 @@ server <- function( input, output) {
     
     
     # histograms   
-    output$Xcol <- renderPlot({qplot(x <-df[,input$xcol], geom="histogram") })
-    output$ycol <- renderPlot({qplot(x <-df[,input$ycol], geom="histogram") })
+    output$histNaiveAlvo <- renderPlot({qplot(x <-df[,input$naiveAlvo], geom="histogram") })
+    #output$ycol <- renderPlot({qplot(x <-df[,input$ycol], geom="histogram") })
     
     
     # correlation matrix
